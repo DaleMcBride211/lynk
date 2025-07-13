@@ -1,40 +1,42 @@
-
 'use client'
-import MainPage from '@/components/mainpage'
 import { useState, useEffect } from 'react'
 import { supabase } from "@/supabase-client"
-import Auth from "@/components/auth"
-import { Button } from "@/components/ui/button"
+import HomePage from '@/components/homepage'
 
-function page() {
+
+
+function Page() {
   const [session, setSession] = useState<any>(null);
 
   const fetchSession = async () => {
-    const currentSession = await supabase.auth.getSession();
-    console.log(currentSession);
-    setSession(currentSession.data.session)
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    setSession(currentSession);
   }
 
   useEffect(() => {
     fetchSession();
-  }, [])
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-  }
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, currentSession) => {
+        setSession(currentSession);
+      }
+    );
+
+    return () => {
+      authListener?.subscription.unsubscribe(); 
+    };
+  }, []);
+
+  // This function will be called by the Header when logout is successful
+  const handleLogoutSuccess = () => {
+    setSession(null); // Explicitly clear the session state to trigger re-render
+  };
+
   return (
     <>
-    {session ? (
-      <>
-        <Button onClick={logout}>LogOut</Button>
-        <MainPage />
-      </>
-
-    ) : (
-      <Auth />
-    )}
+        <HomePage />
     </>
   )
 }
 
-export default page
+export default Page;
