@@ -25,6 +25,7 @@ import {
   CardDescription,
   CardFooter,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox'; // Ensure Checkbox is imported
 
 interface Task {
   id: number;
@@ -35,15 +36,18 @@ interface Task {
   check_completed: boolean;
   due_date: string;
   user_id: string;
+  checklist_items?: { text: string; completed: boolean; }[]; // Updated interface for checklist items
 }
 
 interface SortableTaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (id: number) => void;
+  // NEW PROP: Handler for toggling checklist item completion
+  onToggleChecklistItem: (taskId: number, itemIndex: number, isChecked: boolean) => void;
 }
 
-function SortableTaskCard({ task, onEdit, onDelete }: SortableTaskCardProps) {
+function SortableTaskCard({ task, onEdit, onDelete, onToggleChecklistItem }: SortableTaskCardProps) {
   const {
     attributes,
     listeners,
@@ -80,12 +84,39 @@ function SortableTaskCard({ task, onEdit, onDelete }: SortableTaskCardProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow">
-          <p className="text-gray-700 dark:text-gray-300">{task.description}</p>
+          {task.description && (
+            <p className="text-gray-700 dark:text-gray-300 mb-2">{task.description}</p>
+          )}
+
+          {/* Display Checklist Items with Checkboxes */}
+          {(task.checklist_items && task.checklist_items.length > 0) && (
+            <div className="mt-4">
+              <h4 className="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">Checklist:</h4>
+              <ul className="space-y-1">
+                {task.checklist_items.map((item, index) => (
+                  <li key={index} className="flex items-center text-gray-700 dark:text-gray-300">
+                    <Checkbox
+                      id={`task-${task.id}-item-${index}`} // Unique ID for accessibility
+                      checked={item.completed} // Bind checked state to item.completed
+                      onCheckedChange={(isChecked: boolean) => onToggleChecklistItem(task.id, index, isChecked)} // Handle change
+                      className="mr-2"
+                    />
+                    <label
+                      htmlFor={`task-${task.id}-item-${index}`} // Link label to checkbox
+                      className={`cursor-pointer ${item.completed ? 'line-through text-gray-500 dark:text-gray-400' : ''}`}
+                    >
+                      {item.text}
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
         </CardContent>
         <CardFooter
           className="flex justify-end gap-2"
-          // Keep this, as it's good practice. The activationConstraint is the primary fix.
-          data-dndkit-ignore-pointer-events="true"
+          data-dndkit-ignore-pointer-events="true" // Prevents drag from being initiated by button clicks
         >
           <Button
             variant="outline"
@@ -112,6 +143,8 @@ interface TaskListProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (id: number) => void;
   onDragEnd: (event: DragEndEvent) => void;
+  // NEW PROP: Pass the toggle handler down
+  onToggleChecklistItem: (taskId: number, itemIndex: number, isChecked: boolean) => void;
 }
 
 export function TaskList({
@@ -119,15 +152,12 @@ export function TaskList({
   onEditTask,
   onDeleteTask,
   onDragEnd,
+  onToggleChecklistItem, // Destructure the new prop
 }: TaskListProps) {
-  // DND Kit Sensors
-  // Implemented activationConstraint on PointerSensor
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Requires the pointer to move at least 8 pixels before a drag is initiated
-        // delay: 100, // Optional: Add a small delay (in ms) before drag activates
-        // tolerance: 5, // Optional: pixels of pointer movement before delay is triggered
+        distance: 8, // Requires pointer to move 8 pixels before drag starts
       },
     }),
     useSensor(KeyboardSensor, {
@@ -145,7 +175,7 @@ export function TaskList({
         items={tasks.map((task) => task.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="mt-15 flex-1 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-4">
+        <div className="mt-12 flex-1 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-4">
           {tasks.length === 0 ? (
             <p className="text-gray-600 dark:text-gray-400 text-center col-span-full">
               No tasks found. Add a new task to get started!
@@ -157,6 +187,7 @@ export function TaskList({
                 task={task}
                 onEdit={onEditTask}
                 onDelete={onDeleteTask}
+                onToggleChecklistItem={onToggleChecklistItem} // Pass the new handler
               />
             ))
           )}

@@ -5,11 +5,6 @@ import { supabase } from "@/supabase-client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from 'next/link';
 
-// Define the props interface for type safety
-interface HeaderProps {
-  onLogout: () => void; // A function that takes no arguments and returns void
-}
-
 function Header() {
   const [session, setSession] = useState<any>(null);
 
@@ -68,9 +63,9 @@ return (
               Welcome, {session.user?.email || 'User'}!
             </span>
             <Link href="/notes">
-              <Button variant="secondary" className="hover:bg-purple-700">To Tasks</Button>
+              <Button variant="secondary" className="hover:bg-purple-700 cursor-pointer">To Tasks</Button>
             </Link>
-            <Button onClick={handleLogoutClick} variant="secondary" className="hover:bg-purple-700">
+            <Button onClick={handleLogoutClick} variant="secondary" className="hover:bg-purple-700 cursor-pointer">
               Log Out
             </Button>
           </div>

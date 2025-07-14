@@ -5,11 +5,18 @@ import { supabase } from '@/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { arrayMove } from '@dnd-kit/sortable'; // Import arrayMove
-import { TaskList } from '@/components/sortablecard'; // Import the new TaskList component
-import { User } from '@supabase/supabase-js'; // Import User type
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { arrayMove } from '@dnd-kit/sortable';
+import { TaskList } from '@/components/sortablecard'; // Assuming this is now components/TaskList
+import { User } from '@supabase/supabase-js';
 import Link from 'next/link';
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider
+} from "@/components/ui/tooltip"
 
 interface Task {
   id: number;
@@ -19,39 +26,40 @@ interface Task {
   order_index: number;
   check_completed: boolean;
   due_date: string;
-  user_id: string; // Change to string as Supabase user IDs are UUIDs
+  user_id: string;
+  // UPDATED: Now an array of objects for checklist_items
+  checklist_items?: { text: string; completed: boolean; }[];
 }
 
-const ORDER_INDEX_STEP = 1000; // Define a step for order indices
+const ORDER_INDEX_STEP = 1000;
 
 export default function TaskPage() {
-  const [newTask, setNewTask] = useState({ title: '', description: '' });
+  // Initialize newTask with the new structure for checklist_items
+  const [newTask, setNewTask] = useState({ title: '', description: '', checklist_items: [] as { text: string; completed: boolean; }[], check_completed: false });
   const [tasks, setTasks] = useState<Task[]>([]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null); // State to store the logged-in user
+  const [user, setUser] = useState<User | null>(null);
 
-  // Function to fetch the current user
   const fetchUser = async () => {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) {
       console.error('Error fetching user:', error.message);
-      setUser(null); // Ensure user is null on error
+      setUser(null);
     } else {
       setUser(user);
     }
   };
 
   const fetchTasks = async () => {
-    if (!user) { // Only fetch tasks if a user is logged in
-      setTasks([]); // Clear tasks if no user
+    if (!user) {
+      setTasks([]);
       return;
     }
-    // Always order by order_index when fetching
     const { data, error } = await supabase
       .from('tasks')
       .select('*')
-      .eq('user_id', user.id) // Filter tasks by the current user's ID
+      .eq('user_id', user.id)
       .order('order_index', { ascending: true });
 
     if (error) {
@@ -61,6 +69,10 @@ export default function TaskPage() {
     const tasksWithOrder = data.map((task) => ({
       ...task,
       order_index: task.order_index ?? 0,
+      // Ensure checklist_items are properly structured, converting old strings if necessary
+      checklist_items: task.checklist_items?.map((item: any) =>
+        typeof item === 'string' ? { text: item, completed: false } : item
+      ) ?? [],
     }));
     setTasks(tasksWithOrder);
   };
@@ -88,7 +100,7 @@ export default function TaskPage() {
 
     const { data, error } = await supabase
       .from('tasks')
-      .insert({ ...newTask, user_id: user.id, order_index: nextOrderIndex }) // Assign user.id
+      .insert({ ...newTask, user_id: user.id, order_index: nextOrderIndex })
       .select()
       .single();
 
@@ -97,18 +109,18 @@ export default function TaskPage() {
       return;
     }
 
-    setNewTask({ title: '', description: '' });
+    setNewTask({ title: '', description: '', checklist_items: [], check_completed: false });
     setTasks((prevTasks) =>
       [...prevTasks, data].sort((a, b) => a.order_index - b.order_index)
     );
   };
 
   const handleDeleteTask = async (id: number) => {
-    if (!user) { // Prevent deletion if not logged in
+    if (!user) {
       alert('You must be logged in to delete a task.');
       return;
     }
-    const { error } = await supabase.from('tasks').delete().eq('id', id).eq('user_id', user.id); // Add user_id to deletion condition
+    const { error } = await supabase.from('tasks').delete().eq('id', id).eq('user_id', user.id);
 
     if (error) {
       console.error('Error deleting task: ', error.message);
@@ -125,8 +137,6 @@ export default function TaskPage() {
       return;
     }
 
-    // Get the current time as an ISO 8601 string (e.g., "2025-07-12T23:16:51.404Z")
-    // The 'Z' indicates UTC, which is ideal for timestamptz.
     const currentTimeISO = new Date().toISOString();
 
     const { error } = await supabase
@@ -134,7 +144,8 @@ export default function TaskPage() {
       .update({
         title: editingTask.title,
         description: editingTask.description,
-        updated_at: currentTimeISO // Send the ISO 8601 string
+        updated_at: currentTimeISO,
+        checklist_items: editingTask.checklist_items ?? [],
       })
       .eq('id', editingTask.id)
       .eq('user_id', user.id);
@@ -147,12 +158,12 @@ export default function TaskPage() {
     setIsUpdateModalOpen(false);
     setEditingTask(null);
     fetchTasks();
-};
+  };
 
   const handleDragEnd = async (event: any) => {
     const { active, over } = event;
 
-    if (active.id !== over?.id && user) { // Ensure user is logged in for drag and drop
+    if (active.id !== over?.id && user) {
       const oldIndex = tasks.findIndex((task) => task.id === active.id);
       const newIndex = tasks.findIndex((task) => task.id === over?.id);
 
@@ -164,7 +175,7 @@ export default function TaskPage() {
       const movedTask = newOrderedTasks[newIndex];
 
       if (newIndex === 0) {
-        newOrderIndexForMovedTask = newOrderedTasks[1]?.order_index / 2 || ORDER_INDEX_STEP / 2; // Handle case with only one task after move
+        newOrderIndexForMovedTask = newOrderedTasks[1]?.order_index / 2 || ORDER_INDEX_STEP / 2;
       } else if (newIndex === newOrderedTasks.length - 1) {
         newOrderIndexForMovedTask = newOrderedTasks[newIndex - 1].order_index + ORDER_INDEX_STEP;
       } else {
@@ -183,7 +194,7 @@ export default function TaskPage() {
         .from('tasks')
         .update({ order_index: newOrderIndexForMovedTask })
         .eq('id', movedTask.id)
-        .eq('user_id', user.id); // Add user_id to update condition
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('Error updating task order in database: ', error.message);
@@ -192,9 +203,104 @@ export default function TaskPage() {
     }
   };
 
+  // Adjusted handleAddChecklistItem to use the new object structure
+  const handleAddChecklistItem = () => {
+    setNewTask((prev) => ({
+      ...prev,
+      checklist_items: [...(prev.checklist_items ?? []), { text: '', completed: false }],
+    }));
+  };
+
+  // Adjusted handleNewChecklistItemChange to update the 'text' property
+  const handleNewChecklistItemChange = (index: number, value: string) => {
+    setNewTask((prev) => {
+      const updatedChecklistItems = [...(prev.checklist_items ?? [])];
+      if (updatedChecklistItems[index]) {
+        updatedChecklistItems[index] = { ...updatedChecklistItems[index], text: value };
+      }
+      return { ...prev, checklist_items: updatedChecklistItems };
+    });
+  };
+
+  const handleRemoveNewChecklistItem = (index: number) => {
+    setNewTask((prev) => {
+      const updatedChecklistItems = (prev.checklist_items ?? []).filter((_, i) => i !== index);
+      return { ...prev, checklist_items: updatedChecklistItems };
+    });
+  };
+
+  // Adjusted handleEditingChecklistItemChange to update the 'text' property
+  const handleEditingChecklistItemChange = (index: number, value: string) => {
+    setEditingTask((prev) => {
+      if (!prev) return null;
+      const updatedChecklistItems = [...(prev.checklist_items ?? [])];
+      if (updatedChecklistItems[index]) {
+        updatedChecklistItems[index] = { ...updatedChecklistItems[index], text: value };
+      }
+      return { ...prev, checklist_items: updatedChecklistItems };
+    });
+  };
+
+  // Adjusted handleAddEditingChecklistItem to use the new object structure
+  const handleAddEditingChecklistItem = () => {
+    setEditingTask((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        checklist_items: [...(prev.checklist_items ?? []), { text: '', completed: false }],
+      };
+    });
+  };
+
+  const handleRemoveEditingChecklistItem = (index: number) => {
+    setEditingTask((prev) => {
+      if (!prev) return null;
+      const updatedChecklistItems = (prev.checklist_items ?? []).filter((_, i) => i !== index);
+      return { ...prev, checklist_items: updatedChecklistItems };
+    });
+  };
+
+  // NEW FUNCTION: handle toggling of checklist items completion
+  const handleToggleChecklistItem = async (taskId: number, itemIndex: number, isChecked: boolean) => {
+    if (!user) {
+      alert('You must be logged in to update a task.');
+      return;
+    }
+
+    const taskToUpdate = tasks.find(task => task.id === taskId);
+    if (!taskToUpdate) return;
+
+    const updatedChecklistItems = [...(taskToUpdate.checklist_items ?? [])];
+    if (updatedChecklistItems[itemIndex]) {
+      updatedChecklistItems[itemIndex] = {
+        ...updatedChecklistItems[itemIndex],
+        completed: isChecked,
+      };
+
+      // Update the task in Supabase
+      const { error } = await supabase
+        .from('tasks')
+        .update({ checklist_items: updatedChecklistItems })
+        .eq('id', taskId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating checklist item: ', error.message);
+        return;
+      }
+
+      // Update local state to reflect the change immediately
+      setTasks((prevTasks) =>
+        prevTasks.map((task) =>
+          task.id === taskId ? { ...task, checklist_items: updatedChecklistItems } : task
+        )
+      );
+    }
+  };
+
+
   useEffect(() => {
-    fetchUser(); // Fetch user on component mount
-    // Listen for auth state changes
+    fetchUser();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null);
     });
@@ -202,15 +308,12 @@ export default function TaskPage() {
     return () => {
       subscription?.unsubscribe();
     };
-  }, []); // Run once on mount
+  }, []);
 
   useEffect(() => {
-    // Fetch tasks whenever the user state changes
     fetchTasks();
-  }, [user]); // Re-fetch tasks when user state changes
+  }, [user]);
 
-
-  // You might want to add a loading state or redirect if no user
   if (user === null) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-6 text-center">
@@ -229,61 +332,111 @@ export default function TaskPage() {
     );
   }
 
-  return (
+  return ( 
     <div className="flex flex-col md:flex-row items-start justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4 gap-8">
       {/* Add New Task Form */}
-      <form
-        onSubmit={handleSubmit}
-        className="mt-15 w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-lg shadow-xl space-y-4 md:sticky md:top-4"
-      >
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-6">
-          Add New Task
-        </h2>
-        <div>
-          <label htmlFor="taskTitle" className="sr-only">
-            Task Title
-          </label>
-          <Input
-            id="taskTitle"
-            type="text"
-            placeholder="Task Title"
-            value={newTask.title}
-            onChange={(e) => setNewTask((prev) => ({ ...prev, title: e.target.value }))}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-        <div>
-          <label htmlFor="taskDescription" className="sr-only">
-            Task Description
-          </label>
-          <Textarea
-            id="taskDescription"
-            placeholder="Task Description"
-            value={newTask.description}
-            onChange={(e) =>
-              setNewTask((prev) => ({ ...prev, description: e.target.value }))
-            }
-            rows={4}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white resize-y"
-          />
-        </div>
-        <Button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition duration-300 ease-in-out"
-        >
-          Add Task
-        </Button>
-      </form>
+      <div className="mt-12">
+        <TooltipProvider>
+          <Dialog>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DialogTrigger asChild>
+                  <Button className="text-3xl text-center p-0 w-10 h-10 flex items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                    +
+                  </Button>
+                </DialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>New Task</p>
+              </TooltipContent>
+            </Tooltip>
+            <DialogContent>
+              <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white text-center">Add New Task</DialogTitle>
+              <form
+                onSubmit={handleSubmit}
+                className="w-full max-w-md p-6 dark:bg-gray-800 space-y-4 md:sticky md:top-4"
+              >
+                <div>
+                  <label htmlFor="taskTitle" className="sr-only">
+                    Task Title
+                  </label>
+                  <Input
+                    id="taskTitle"
+                    type="text"
+                    placeholder="Task Title"
+                    value={newTask.title}
+                    onChange={(e) => setNewTask((prev) => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="taskDescription" className="sr-only">
+                    Task Description
+                  </label>
+                  <Textarea
+                    id="taskDescription"
+                    placeholder="Task Description"
+                    value={newTask.description}
+                    onChange={(e) =>
+                      setNewTask((prev) => ({ ...prev, description: e.target.value }))
+                    }
+                    rows={4}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white resize-y"
+                  />
+                </div>
+                <div className='checklist'>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Checklist</h3>
+                  {(newTask.checklist_items ?? []).map((item, index) => (
+                    <div key={index} className="flex items-center space-x-2 mb-2">
+                      <Input
+                        type="text"
+                        placeholder={`Checklist Item ${index + 1}`}
+                        value={item.text} // Access item.text
+                        onChange={(e) => handleNewChecklistItemChange(index, e.target.value)}
+                        className="flex-grow px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleRemoveNewChecklistItem(index)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                  <Button type="button" onClick={handleAddChecklistItem} className="cursor-pointer">
+                    Add Checklist Item
+                  </Button>
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition duration-300 ease-in-out"
+                >
+                  Add Task
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </TooltipProvider>
+      </div>
 
       {/* Task List Component */}
       <TaskList
         tasks={tasks}
         onEditTask={(editedTask) => {
-          setEditingTask(editedTask);
+          // Ensure checklist_items are properly structured when opening the edit modal
+          setEditingTask({
+            ...editedTask,
+            checklist_items: editedTask.checklist_items?.map((item: any) =>
+              typeof item === 'string' ? { text: item, completed: false } : item
+            ) ?? [],
+          });
           setIsUpdateModalOpen(true);
         }}
         onDeleteTask={handleDeleteTask}
         onDragEnd={handleDragEnd}
+        onToggleChecklistItem={handleToggleChecklistItem} 
       />
 
       {/* Update Task Modal */}
@@ -322,6 +475,31 @@ export default function TaskPage() {
                   rows={4}
                   className="col-span-3 dark:bg-gray-700 dark:text-white dark:border-gray-600 resize-y"
                 />
+              </div>
+              <div className='checklist'>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Checklist</h3>
+                {(editingTask.checklist_items ?? []).map((item, index) => (
+                  <div key={index} className="flex items-center space-x-2 mb-2">
+                    <Input
+                      type="text"
+                      placeholder={`Checklist Item ${index + 1}`}
+                      value={item.text} // Access item.text
+                      onChange={(e) => handleEditingChecklistItemChange(index, e.target.value)}
+                      className="flex-grow px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleRemoveEditingChecklistItem(index)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" onClick={handleAddEditingChecklistItem} className="cursor-pointer">
+                  Add Checklist Item
+                </Button>
               </div>
             </div>
             <DialogFooter>
