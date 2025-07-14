@@ -1,13 +1,13 @@
 // app/page.tsx (or wherever your main page component is)
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { supabase } from '@/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { arrayMove } from '@dnd-kit/sortable';
-import { TaskList } from '@/components/sortablecard'; // Assuming this is now components/TaskList
+import { TaskList } from '@/components/sortablecard';
 import { User } from '@supabase/supabase-js';
 import Link from 'next/link';
 import {
@@ -16,7 +16,7 @@ import {
   TooltipTrigger,
   TooltipProvider
 } from "@/components/ui/tooltip"
-import { DragEndEvent } from '@dnd-kit/core'; // Import DragEndEvent
+import { DragEndEvent } from '@dnd-kit/core';
 
 interface ChecklistItem {
   text: string;
@@ -42,19 +42,23 @@ export default function TaskPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  // Initialize user as undefined to indicate loading state
+  const [user, setUser] = useState<User | null | undefined>(undefined);
 
-  const fetchUser = async () => {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error) {
-      console.error('Error fetching user:', error.message);
-      setUser(null);
-    } else {
-      setUser(user);
-    }
-  };
+  // No longer need fetchUser as a separate function, onAuthStateChange handles it
+  // const fetchUser = async () => {
+  //   const { data: { user }, error } = await supabase.auth.getUser();
+  //   if (error) {
+  //     console.error('Error fetching user:', error.message);
+  //     setUser(null);
+  //   } else {
+  //     setUser(user);
+  //   }
+  // };
 
-  const fetchTasks = async () => {
+  // Use useCallback to memoize fetchTasks
+  const fetchTasks = useCallback(async () => {
+    // Only fetch tasks if user is not null (i.e., logged in)
     if (!user) {
       setTasks([]);
       return;
@@ -77,7 +81,7 @@ export default function TaskPage() {
       ) ?? [],
     }));
     setTasks(tasksWithOrder);
-  };
+  }, [user]); // Dependency array for useCallback
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,7 +166,7 @@ export default function TaskPage() {
     fetchTasks();
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => { // Changed type to DragEndEvent
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (active.id !== over?.id && user) {
@@ -293,21 +297,37 @@ export default function TaskPage() {
     }
   };
 
-
+  // Effect to listen for auth state changes
   useEffect(() => {
-    fetchUser();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
+      setUser(session?.user || null); // Set user to User object or null
     });
 
     return () => {
       subscription?.unsubscribe();
     };
-  }, []);
+  }, []); // Empty dependency array means this runs once on mount
 
+  // Effect to fetch tasks when user state is resolved (not undefined)
   useEffect(() => {
-    fetchTasks();
-  }, [user]); // Added fetchTasks to dependency array
+    if (user !== undefined) { // Only run if user state is resolved
+      fetchTasks();
+    }
+  }, [user, fetchTasks]); // fetchTasks is now a stable dependency due to useCallback
+
+  // Show loading or login message based on user state
+  if (user === undefined) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-6 text-center">
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 animate-fadeIn">
+          Loading User Session...
+        </h2>
+        <p className="text-lg text-gray-700 dark:text-gray-300 mb-8 max-w-md">
+          Please wait while we check your authentication status.
+        </p>
+      </div>
+    );
+  }
 
   if (user === null) {
     return (
