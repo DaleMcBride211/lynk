@@ -5,18 +5,23 @@ import { supabase } from '@/supabase-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { arrayMove } from '@dnd-kit/sortable';
 import { TaskList } from '@/components/sortablecard'; // Assuming this is now components/TaskList
 import { User } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
   TooltipProvider
 } from "@/components/ui/tooltip"
+import { DragEndEvent } from '@dnd-kit/core'; // Import DragEndEvent
+
+interface ChecklistItem {
+  text: string;
+  completed: boolean;
+}
 
 interface Task {
   id: number;
@@ -27,15 +32,13 @@ interface Task {
   check_completed: boolean;
   due_date: string;
   user_id: string;
-  // UPDATED: Now an array of objects for checklist_items
-  checklist_items?: { text: string; completed: boolean; }[];
+  checklist_items?: ChecklistItem[];
 }
 
 const ORDER_INDEX_STEP = 1000;
 
 export default function TaskPage() {
-  // Initialize newTask with the new structure for checklist_items
-  const [newTask, setNewTask] = useState({ title: '', description: '', checklist_items: [] as { text: string; completed: boolean; }[], check_completed: false });
+  const [newTask, setNewTask] = useState({ title: '', description: '', checklist_items: [] as ChecklistItem[], check_completed: false });
   const [tasks, setTasks] = useState<Task[]>([]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -69,8 +72,7 @@ export default function TaskPage() {
     const tasksWithOrder = data.map((task) => ({
       ...task,
       order_index: task.order_index ?? 0,
-      // Ensure checklist_items are properly structured, converting old strings if necessary
-      checklist_items: task.checklist_items?.map((item: any) =>
+      checklist_items: task.checklist_items?.map((item: string | ChecklistItem) =>
         typeof item === 'string' ? { text: item, completed: false } : item
       ) ?? [],
     }));
@@ -160,7 +162,7 @@ export default function TaskPage() {
     fetchTasks();
   };
 
-  const handleDragEnd = async (event: any) => {
+  const handleDragEnd = async (event: DragEndEvent) => { // Changed type to DragEndEvent
     const { active, over } = event;
 
     if (active.id !== over?.id && user) {
@@ -203,7 +205,6 @@ export default function TaskPage() {
     }
   };
 
-  // Adjusted handleAddChecklistItem to use the new object structure
   const handleAddChecklistItem = () => {
     setNewTask((prev) => ({
       ...prev,
@@ -211,7 +212,6 @@ export default function TaskPage() {
     }));
   };
 
-  // Adjusted handleNewChecklistItemChange to update the 'text' property
   const handleNewChecklistItemChange = (index: number, value: string) => {
     setNewTask((prev) => {
       const updatedChecklistItems = [...(prev.checklist_items ?? [])];
@@ -229,7 +229,6 @@ export default function TaskPage() {
     });
   };
 
-  // Adjusted handleEditingChecklistItemChange to update the 'text' property
   const handleEditingChecklistItemChange = (index: number, value: string) => {
     setEditingTask((prev) => {
       if (!prev) return null;
@@ -241,7 +240,6 @@ export default function TaskPage() {
     });
   };
 
-  // Adjusted handleAddEditingChecklistItem to use the new object structure
   const handleAddEditingChecklistItem = () => {
     setEditingTask((prev) => {
       if (!prev) return null;
@@ -260,7 +258,6 @@ export default function TaskPage() {
     });
   };
 
-  // NEW FUNCTION: handle toggling of checklist items completion
   const handleToggleChecklistItem = async (taskId: number, itemIndex: number, isChecked: boolean) => {
     if (!user) {
       alert('You must be logged in to update a task.');
@@ -277,7 +274,6 @@ export default function TaskPage() {
         completed: isChecked,
       };
 
-      // Update the task in Supabase
       const { error } = await supabase
         .from('tasks')
         .update({ checklist_items: updatedChecklistItems })
@@ -289,7 +285,6 @@ export default function TaskPage() {
         return;
       }
 
-      // Update local state to reflect the change immediately
       setTasks((prevTasks) =>
         prevTasks.map((task) =>
           task.id === taskId ? { ...task, checklist_items: updatedChecklistItems } : task
@@ -312,7 +307,7 @@ export default function TaskPage() {
 
   useEffect(() => {
     fetchTasks();
-  }, [user]);
+  }, [user]); // Added fetchTasks to dependency array
 
   if (user === null) {
     return (
@@ -321,7 +316,7 @@ export default function TaskPage() {
           Welcome to Your Task Manager! 🚀
         </h2>
         <p className="text-lg text-gray-700 dark:text-gray-300 mb-8 max-w-md">
-          It looks like you're not logged in. Please log in or sign up to view and manage your tasks.
+          It looks like you&apos;re not logged in. Please log in or sign up to view and manage your tasks.
         </p>
         <Link href='/' passHref>
           <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
@@ -332,7 +327,7 @@ export default function TaskPage() {
     );
   }
 
-  return ( 
+  return (
     <div className="flex flex-col md:flex-row items-start justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4 gap-8">
       {/* Add New Task Form */}
       <div className="mt-12">
@@ -391,7 +386,7 @@ export default function TaskPage() {
                       <Input
                         type="text"
                         placeholder={`Checklist Item ${index + 1}`}
-                        value={item.text} // Access item.text
+                        value={item.text}
                         onChange={(e) => handleNewChecklistItemChange(index, e.target.value)}
                         className="flex-grow px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
                       />
@@ -425,10 +420,9 @@ export default function TaskPage() {
       <TaskList
         tasks={tasks}
         onEditTask={(editedTask) => {
-          // Ensure checklist_items are properly structured when opening the edit modal
           setEditingTask({
             ...editedTask,
-            checklist_items: editedTask.checklist_items?.map((item: any) =>
+            checklist_items: editedTask.checklist_items?.map((item: string | ChecklistItem) =>
               typeof item === 'string' ? { text: item, completed: false } : item
             ) ?? [],
           });
@@ -436,7 +430,7 @@ export default function TaskPage() {
         }}
         onDeleteTask={handleDeleteTask}
         onDragEnd={handleDragEnd}
-        onToggleChecklistItem={handleToggleChecklistItem} 
+        onToggleChecklistItem={handleToggleChecklistItem}
       />
 
       {/* Update Task Modal */}
@@ -483,7 +477,7 @@ export default function TaskPage() {
                     <Input
                       type="text"
                       placeholder={`Checklist Item ${index + 1}`}
-                      value={item.text} // Access item.text
+                      value={item.text}
                       onChange={(e) => handleEditingChecklistItemChange(index, e.target.value)}
                       className="flex-grow px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-700 dark:text-white"
                     />

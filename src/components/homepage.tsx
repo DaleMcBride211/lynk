@@ -45,7 +45,7 @@ function Homepage() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-700">
-                Easily create, organize, and prioritize your daily tasks. Lynk's clean and simple interface
+                Easily create, organize, and prioritize your daily tasks. Lynk&apos;s clean and simple interface
                 ensures you spend less time managing and more time doing. Drag-and-drop, due dates, and reminders keep you on track.
               </p>
             </CardContent>
@@ -72,7 +72,7 @@ function Homepage() {
             <CardContent>
               <p className="text-gray-700">
                 Your tasks and goals are always with you. Access Lynk from your desktop, tablet, or phone.
-                Stay productive whether you're at your desk, on the go, or offline.
+                Stay productive whether you&apos;re at your desk, on the go, or offline.
               </p>
             </CardContent>
           </Card>
@@ -85,7 +85,7 @@ function Homepage() {
             <CardContent>
               <p className="text-gray-700">
                 Never miss a deadline or an important task again. Lynk sends timely, customizable
-                reminders, ensuring you're always aware of what needs your attention next.
+                reminders, ensuring you&apos;re always aware of what needs your attention next.
               </p>
             </CardContent>
           </Card>
@@ -147,7 +147,7 @@ function Homepage() {
             </p>
             <p>
               Our mission is to **simplify your digital life** and help you focus on what truly matters.
-              We're constantly innovating, listening to our users, and refining Lynk to ensure it remains
+              We&apos;re constantly innovating, listening to our users, and refining Lynk to ensure it remains
               your go-to tool for a more organized and productive future.
             </p>
           </CardContent>

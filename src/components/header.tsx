@@ -5,13 +5,18 @@ import { supabase } from "@/supabase-client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from 'next/link';
 
+// 1. Import the Session type directly from Supabase
+import { Session } from '@supabase/supabase-js'; // Or '@supabase/auth-js', depending on your exact setup
+
 function Header() {
-  const [session, setSession] = useState<any>(null);
+  // 2. Use the imported Session type
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     const fetchAndSetSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
+      console.log(session);
     };
 
     fetchAndSetSession();
@@ -29,20 +34,14 @@ function Header() {
     };
   }, []);
 
-  // Renamed from 'logout' to 'handleLogoutClick' to differentiate from the prop
   const handleLogoutClick = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("Error logging out:", error.message);
-    } else {
-      // Call the onLogout prop provided by the parent
-      // onLogout();
     }
   };
 
-  
-
-return (
+  return (
     <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 bg-gradient-to-r from-purple-800 to-indigo-700 text-white shadow-lg">
       <Link href="/">
         <div className="flex items-center gap-4">
@@ -57,7 +56,7 @@ return (
       </Link>
 
       <div>
-        {session ? ( // Only show welcome message and logout if there's a session
+        {session ? (
           <div className="flex items-center space-x-4">
             <span className="text-sm text-indigo-100 hidden sm:block">
               Welcome, {session.user?.email || 'User'}!
@@ -72,11 +71,11 @@ return (
         ) : (
           <div>
             <Link href='/signin'>
-              <Button className="hover: cursor-pointer"> 
+              <Button className="hover: cursor-pointer">
                 Log In
-              </Button> {/* This was the missing closing tag */}
+              </Button>
             </Link>
-          </div> // This was the incorrect self-closing div
+          </div>
         )}
       </div>
     </header>
