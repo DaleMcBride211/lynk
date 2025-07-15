@@ -50,7 +50,7 @@ function Header() {
             <AvatarFallback>CN</AvatarFallback>
           </Avatar>
           <span className="text-3xl font-extrabold tracking-tight">
-            Link
+            Lynk
           </span>
         </div>
       </Link>
