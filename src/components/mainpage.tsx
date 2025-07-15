@@ -23,7 +23,8 @@ interface Task {
   description: string;
   created_at: string;
   order_index: number;
-  check_completed: boolean;
+  // Renamed from check_completed to completed for consistency
+  completed: boolean;
   due_date: string;
   user_id: string;
   checklist_items?: ChecklistItem[];
@@ -44,7 +45,7 @@ export default function TaskPage() {
     }
     const { data, error } = await supabase
       .from('tasks')
-      .select('*')
+      .select('*') // Ensure 'completed' is included in this select
       .eq('user_id', user.id)
       .order('order_index', { ascending: true });
 
@@ -58,6 +59,8 @@ export default function TaskPage() {
       checklist_items: task.checklist_items?.map((item: string | ChecklistItem) =>
         typeof item === 'string' ? { text: item, completed: false } : item
       ) ?? [],
+      // This line is crucial for mapping from the DB to your state
+      completed: task.completed, // Assuming your DB column is now named 'completed'
     }));
     setTasks(tasksWithOrder);
   }, [user]);
@@ -81,9 +84,10 @@ export default function TaskPage() {
       nextOrderIndex = lastTaskOrderIndex + ORDER_INDEX_STEP;
     }
 
+    // Set 'completed' to false by default when adding a new task
     const { data, error } = await supabase
       .from('tasks')
-      .insert({ ...newTaskData, user_id: user.id, order_index: nextOrderIndex })
+      .insert({ ...newTaskData, user_id: user.id, order_index: nextOrderIndex, completed: false })
       .select()
       .single();
 
@@ -131,6 +135,8 @@ export default function TaskPage() {
         description: updatedTask.description,
         updated_at: currentTimeISO,
         checklist_items: updatedTask.checklist_items ?? [],
+        // Ensure 'completed' status is also updated if the dialog allows it
+        completed: updatedTask.completed,
       })
       .eq('id', updatedTask.id)
       .eq('user_id', user.id);
@@ -223,6 +229,39 @@ export default function TaskPage() {
     }
   };
 
+  // NEW FUNCTION: Handler for toggling the main task completion status
+  const handleToggleTaskCompletion = async (taskId: number, isCompleted: boolean) => {
+    if (!user) {
+      alert('You must be logged in to update a task.');
+      return;
+    }
+
+    // Optimistically update the UI
+    setTasks(prevTasks =>
+      prevTasks.map(task =>
+        task.id === taskId ? { ...task, completed: isCompleted } : task
+      )
+    );
+
+    // Update in Supabase
+    const { error } = await supabase
+      .from('tasks')
+      .update({ completed: isCompleted })
+      .eq('id', taskId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error updating task completion:', error.message);
+      // Revert UI if API call fails
+      setTasks(prevTasks =>
+        prevTasks.map(task =>
+          task.id === taskId ? { ...task, completed: !isCompleted } : task
+        )
+      );
+    }
+  };
+
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null);
@@ -290,6 +329,7 @@ export default function TaskPage() {
         onDeleteTask={handleDeleteTask}
         onDragEnd={handleDragEnd}
         onToggleChecklistItem={handleToggleChecklistItem}
+        onToggleTaskCompletion={handleToggleTaskCompletion} // Pass the new handler
       />
 
       {editingTask && (

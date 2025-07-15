@@ -24,7 +24,7 @@ import {
   CardDescription,
   CardFooter,
 } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox'; 
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -39,21 +39,23 @@ interface Task {
   description: string;
   created_at: string;
   order_index: number;
-  check_completed: boolean;
+  // Use 'completed' for the main task completion status
+  completed: boolean; // Renamed from check_completed for clarity
   due_date: string;
   user_id: string;
-  checklist_items?: { text: string; completed: boolean; }[]; // Updated interface for checklist items
+  checklist_items?: { text: string; completed: boolean; }[];
 }
 
 interface SortableTaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (id: number) => void;
-  // NEW PROP: Handler for toggling checklist item completion
   onToggleChecklistItem: (taskId: number, itemIndex: number, isChecked: boolean) => void;
+  // NEW PROP: Handler for toggling task completion
+  onToggleTaskCompletion: (taskId: number, isCompleted: boolean) => void;
 }
 
-function SortableTaskCard({ task, onEdit, onDelete, onToggleChecklistItem }: SortableTaskCardProps) {
+function SortableTaskCard({ task, onEdit, onDelete, onToggleChecklistItem, onToggleTaskCompletion }: SortableTaskCardProps) {
   const {
     attributes,
     listeners,
@@ -71,7 +73,7 @@ function SortableTaskCard({ task, onEdit, onDelete, onToggleChecklistItem }: Sor
     boxShadow: isDragging
       ? '0px 8px 16px rgba(0, 0, 0, 0.2)'
       : '0px 4px 8px rgba(0, 0, 0, 0.1)',
-    cursor: isDragging ? 'grabbing' : 'grab', // Visual cue for dragging
+    cursor: isDragging ? 'grabbing' : 'grab',
   };
 
   return (
@@ -79,18 +81,28 @@ function SortableTaskCard({ task, onEdit, onDelete, onToggleChecklistItem }: Sor
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className="w-full h-full flex flex-col justify-between dark:bg-gray-800 dark:text-white border dark:border-gray-700 rounded-lg shadow-md"
+      {...listeners}
+      className={`w-full h-full flex flex-col justify-between dark:bg-gray-800 dark:text-white border dark:border-gray-700 rounded-lg shadow-md ${task.completed ? 'opacity-70 line-through' : ''}`}
     >
       <Card className="w-full h-full flex flex-col justify-between dark:bg-gray-800 dark:text-white border-none">
         <Dialog>
-          
           <DialogTrigger asChild>
-            
             <CardHeader
-              className="cursor-pointer" 
-              {...listeners} 
+              className={`flex flex-row items-center justify-between space-x-4 pr-6 ${task.completed ? 'line-through' : ''}`}
             >
-              <CardTitle className="text-xl font-semibold">{task.title}</CardTitle>
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id={`task-${task.id}-completed`}
+                  checked={task.completed}
+                  onCheckedChange={(isChecked: boolean) => onToggleTaskCompletion(task.id, isChecked)}
+                  className="w-5 h-5 flex-shrink-0"
+                  // Prevent drag from starting when interacting with the checkbox
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <CardTitle className={`text-xl font-semibold ${task.completed ? 'text-gray-500 dark:text-gray-400' : ''}`}>
+                  {task.title}
+                </CardTitle>
+              </div>
               <CardDescription className="text-sm text-gray-500 dark:text-gray-400">
                 Created: {new Date(task.created_at).toLocaleDateString()}
               </CardDescription>
@@ -102,7 +114,7 @@ function SortableTaskCard({ task, onEdit, onDelete, onToggleChecklistItem }: Sor
             <DialogDescription className="text-sm text-gray-500 dark:text-gray-400">
               Created: {new Date(task.created_at).toLocaleDateString()}
             </DialogDescription>
-             
+
             <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md">
               {task.description && (
                 <p className="text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">{task.description}</p>
@@ -115,13 +127,13 @@ function SortableTaskCard({ task, onEdit, onDelete, onToggleChecklistItem }: Sor
                     {task.checklist_items.map((item, index) => (
                       <li key={index} className="flex items-start text-gray-700 dark:text-gray-300">
                         <Checkbox
-                          id={`task-${task.id}-item-${index}`} // Unique ID for accessibility
-                          checked={item.completed} // Bind checked state to item.completed
-                          onCheckedChange={(isChecked: boolean) => onToggleChecklistItem(task.id, index, isChecked)} // Handle change
-                          className="mr-3 mt-1 flex-shrink-0" // Align checkbox with text
+                          id={`task-${task.id}-item-${index}`}
+                          checked={item.completed}
+                          onCheckedChange={(isChecked: boolean) => onToggleChecklistItem(task.id, index, isChecked)}
+                          className="mr-3 mt-1 flex-shrink-0"
                         />
                         <label
-                          htmlFor={`task-${task.id}-item-${index}`} // Link label to checkbox
+                          htmlFor={`task-${task.id}-item-${index}`}
                           className={`flex-grow cursor-pointer text-base ${item.completed ? 'line-through text-gray-500 dark:text-gray-400' : ''}`}
                         >
                           {item.text}
@@ -135,7 +147,6 @@ function SortableTaskCard({ task, onEdit, onDelete, onToggleChecklistItem }: Sor
 
             <CardFooter
               className="flex justify-end gap-3 pt-4"
-              // Add this if you want to prevent dragging when clicking buttons within the footer
               data-dndkit-ignore-pointer-events="true"
             >
               <Button
@@ -165,8 +176,9 @@ interface TaskListProps {
   onEditTask: (task: Task) => void;
   onDeleteTask: (id: number) => void;
   onDragEnd: (event: DragEndEvent) => void;
-  // NEW PROP: Pass the toggle handler down
   onToggleChecklistItem: (taskId: number, itemIndex: number, isChecked: boolean) => void;
+  // NEW PROP: Handler for toggling task completion
+  onToggleTaskCompletion: (taskId: number, isCompleted: boolean) => void;
 }
 
 export function TaskList({
@@ -174,12 +186,13 @@ export function TaskList({
   onEditTask,
   onDeleteTask,
   onDragEnd,
-  onToggleChecklistItem, // Destructure the new prop
+  onToggleChecklistItem,
+  onToggleTaskCompletion,
 }: TaskListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Requires pointer to move 8 pixels before drag starts
+        distance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -209,7 +222,8 @@ export function TaskList({
                 task={task}
                 onEdit={onEditTask}
                 onDelete={onDeleteTask}
-                onToggleChecklistItem={onToggleChecklistItem} // Pass the new handler
+                onToggleChecklistItem={onToggleChecklistItem}
+                onToggleTaskCompletion={onToggleTaskCompletion} // Pass the new handler
               />
             ))
           )}
