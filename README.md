@@ -11,7 +11,7 @@
 
 ## Technologies Used
 
-* **Next.js**: A React framework for building server-side rendered and static websites.
-* **TypeScript**: A typed superset of JavaScript that enhances code quality and developer productivity.
-* **Tailwind CSS**: A utility-first CSS framework for rapid UI development.
-* **Supabase**: An open-source Firebase alternative that provides a powerful backend as a service, including a **Postgres Database** and **Supabase Auth**.
+* Next.js
+* TypeScript
+* Tailwind CSS
+* Supabase
