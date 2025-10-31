@@ -1,6 +1,6 @@
 'use client'
 import { useState, FormEvent, ChangeEvent, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // For Pages Router. If using App Router, use 'next/navigation'
+import { useRouter } from 'next/navigation'; 
 import { supabase } from "@/supabase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,34 +14,34 @@ function Auth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("signIn"); // State to manage active tab
+  const [activeTab, setActiveTab] = useState("signIn"); 
 
-  const router = useRouter(); // Initialize useRouter
+  const router = useRouter(); 
 
-  // Effect to redirect if user is already logged in and handle auth state changes
+
   useEffect(() => {
-    // Initial check for session
+    
     const checkUserSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.push('/notes'); // Redirect to notes if session exists
+        router.push('/notes'); 
       }
     };
     checkUserSession();
 
-    // Listen for auth state changes
+   
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        router.push('/notes'); // Redirect if session becomes active
+        router.push('/notes'); 
       }
     });
 
-    // Cleanup function: unsubscribe from the auth listener
+  
     return () => {
-      // Corrected access to unsubscribe
+      
       authListener.subscription?.unsubscribe();
     };
-  }, [router]); // Depend on router to avoid lint warnings
+  }, [router]); 
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -58,13 +58,13 @@ function Auth() {
         setEmail("");
         setPassword("");
       }
-    } else { // activeTab === "signIn"
+    } else { 
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) {
         setError(signInError.message);
       } else {
         setMessage("Signed in successfully!");
-        router.push('/notes'); // Programmatic redirect after successful sign-in
+        router.push('/notes'); 
       }
     }
     setLoading(false);
@@ -72,10 +72,10 @@ function Auth() {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    setError(null); // Clear errors when changing tabs
-    setMessage(null); // Clear messages when changing tabs
-    setEmail(""); // Clear fields
-    setPassword(""); // Clear fields
+    setError(null);
+    setMessage(null); 
+    setEmail(""); 
+    setPassword("");
   };
 
   return (

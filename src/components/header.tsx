@@ -4,12 +4,10 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/supabase-client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from 'next/link';
-
-// 1. Import the Session type directly from Supabase
-import { Session } from '@supabase/supabase-js'; // Or '@supabase/auth-js', depending on your exact setup
+import { Session } from '@supabase/supabase-js';
 
 function Header() {
-  // 2. Use the imported Session type
+ 
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {

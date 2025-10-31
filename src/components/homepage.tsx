@@ -6,7 +6,7 @@ import Link from 'next/link';
 function Homepage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-indigo-200 flex flex-col items-center p-4 pt-12 md:pt-20">
-      {/* Hero Section */}
+      
       <div className="text-center mb-16 animate-fade-in-down max-w-4xl mx-auto">
         <h1 className="text-6xl md:text-7xl font-extrabold text-indigo-800 tracking-tight leading-tight mb-6">
           Welcome to <span className="text-purple-600">Lynk</span>
@@ -19,11 +19,8 @@ function Homepage() {
           
         </div>
       </div>
-      
 
-      ---
-
-      {/* Call to Action Section (Repeated for emphasis) */}
+    
       <section className="w-full max-w-4xl my-16 text-center animate-fade-in-up">
         <Card className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-2xl rounded-xl p-8 md:p-12">
           <CardTitle className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
@@ -45,7 +42,7 @@ function Homepage() {
         </Card>
       </section>
 
-      {/* Footer */}
+     
       <footer className="mt-16 pb-8 text-center text-gray-600 text-sm">
         &copy; {new Date().getFullYear()} Lynk. All rights reserved. Crafted with passion.
       </footer>

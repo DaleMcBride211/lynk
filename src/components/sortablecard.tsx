@@ -177,7 +177,6 @@ interface TaskListProps {
   onDeleteTask: (id: number) => void;
   onDragEnd: (event: DragEndEvent) => void;
   onToggleChecklistItem: (taskId: number, itemIndex: number, isChecked: boolean) => void;
-  // NEW PROP: Handler for toggling task completion
   onToggleTaskCompletion: (taskId: number, isCompleted: boolean) => void;
 }
 

@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Overview
 
-## Getting Started
+The core software I developed, **Lynk**, is a to-do list application that leverages the power of the **Next.js** framework for the frontend and **Supabase** for the backend database and authentication. A key feature I implemented is the **drag-and-drop reordering** of tasks, which was a significant learning objective for me regarding client-side state management and database synchronization.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+My primary purpose for writing Lynk was to gain a deeper, practical understanding of working with **full-stack JavaScript/TypeScript technologies**. Specifically, I wanted to master the integration between a server-rendered React framework (Next.js) and a Backend-as-a-Service (Supabase). The drag-and-drop functionality successfully challenged me to learn about **complex UI interactions**, efficient state updates, and how to persist those changes back to the database in a performant manner.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+[4-Minute Lynk Demo & Code Walkthrough](http://youtube.link.goes.here)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# Development Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The application was built using the following tools and technologies:
 
-## Learn More
+* **Code Editor:** **VS Code (Visual Studio Code)** was my primary integrated development environment.
+* **Programming Language:** The entire application is written using **JavaScript**.
+* **Frontend Framework:** **Next.js** (based on React) was used for building the user interface, routing, and handling server-side logic.
+* **Backend & Database:** **Supabase** provided the PostgreSQL database, **User Authentication (via Supabase Auth)**, and real-time capabilities. I primarily interacted with it using the official Supabase client libraries.
+* **Libraries:** For the critical drag-and-drop feature, I utilized a specialized React library, likely **dnd-kit** or a similar solution, to manage the complex drag logic, giving me a strong grasp of how these libraries abstract away the native HTML Drag and Drop API.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Useful Websites
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The following websites were instrumental in researching implementation details and understanding specific technical concepts for this project:
 
-## Deploy on Vercel
+- [Supabase Docs](http://supabase.com/)
+- [Next.js Documentation](https://nextjs.org/)
+- [dnd-kit Documentation](https://dndkit.com/)
+- [Gemini](https://gemini.google.com/)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Future Work
+
+I have identified several areas for improvement and expansion in future iterations of Lynk:
+
+-   **Introduce task categories or lists** (e.g., "Work," "Personal," "Shopping") to allow users to organize to-dos beyond a single list, requiring new database schemas and UI filtering logic.
+-   **Improve accessibility** of the drag-and-drop interface for keyboard-only users, ensuring compliance with ARIA standards for interactive elements.
+-   **Add filtering and sorting functionality** (e.g., sort by creation date, due date, or priority) to the main list interface.

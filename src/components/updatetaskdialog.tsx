@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
-// --- REMOVE THE LOCAL INTERFACE DEFINITIONS HERE ---
 interface ChecklistItem {
   text: string;
   completed: boolean;
@@ -17,7 +16,7 @@ interface Task {
   description: string;
   created_at: string;
   order_index: number;
-  completed: boolean; // <--- THIS WAS THE MISMATCHING PROPERTY
+  completed: boolean; 
   due_date: string;
   user_id: string;
   checklist_items?: ChecklistItem[];
@@ -35,7 +34,6 @@ export function UpdateTaskDialog({ isOpen, onOpenChange, editingTask, onUpdateTa
   const [currentEditingTask, setCurrentEditingTask] = useState<Task | null>(editingTask);
 
   useEffect(() => {
-    // When editingTask prop changes, update the internal state
     setCurrentEditingTask(editingTask);
   }, [editingTask]);
 
@@ -71,12 +69,10 @@ export function UpdateTaskDialog({ isOpen, onOpenChange, editingTask, onUpdateTa
   const handleSave = async () => {
     if (currentEditingTask) {
       await onUpdateTask(currentEditingTask);
-      // Close the dialog after saving
       onOpenChange(false);
     }
   };
 
-  // Only render if editingTask is not null
   if (!currentEditingTask) return null;
 
   return (
