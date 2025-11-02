@@ -7,7 +7,7 @@ The core software I developed, **Lynk**, is a to-do list application that levera
 
 My primary purpose for writing Lynk was to gain a deeper, practical understanding of working with **full-stack JavaScript/TypeScript technologies**. Specifically, I wanted to master the integration between a server-rendered React framework (Next.js) and a Backend-as-a-Service (Supabase). The drag-and-drop functionality successfully challenged me to learn about **complex UI interactions**, efficient state updates, and how to persist those changes back to the database in a performant manner.
 
-[4-Minute Lynk Demo & Code Walkthrough](http://youtube.link.goes.here)
+[Demo Video](https://youtu.be/sdIPlgMBFRI)
 
 # Development Environment
 
